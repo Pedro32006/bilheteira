@@ -1,0 +1,49 @@
+name: Monitor bilheteira FPF
+
+on:
+  schedule:
+    # Corre a cada 5 minutos (minimo pratico recomendado pelo GitHub Actions).
+    - cron: "*/5 * * * *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: monitor-bilheteira
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Run monitor
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python monitor_bilheteira.py
+
+      - name: Commit updated state (if changed)
+        run: |
+          git config user.name "bilheteira-monitor-bot"
+          git config user.email "actions@users.noreply.github.com"
+          if ! git diff --quiet -- bilheteira_state.json; then
+            git add bilheteira_state.json
+            git commit -m "Atualiza estado da bilheteira"
+            git push
+          else
+            echo "Sem alteracoes de estado."
+          fi
