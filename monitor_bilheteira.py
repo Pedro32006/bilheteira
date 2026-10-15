@@ -115,6 +115,14 @@ def send_telegram_message(text: str) -> None:
 
 
 def main() -> int:
+    if os.environ.get("FORCE_TEST_MESSAGE") == "true":
+        log.info("FORCE_TEST_MESSAGE ativo: a enviar mensagem de teste, sem verificar a pagina.")
+        send_telegram_message(
+            "Teste do monitor da bilheteira FPF: se recebeste isto, o bot "
+            "e os secrets estao configurados corretamente."
+        )
+        return 0
+
     try:
         text = fetch_page_text()
     except Exception as exc:
